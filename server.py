@@ -1,30 +1,44 @@
 from flask import Flask, request, jsonify
 from dotenv import load_dotenv
 import os
+import time
+import sys
+
+# Load environment variables from .env file
+load_dotenv()
+
+# Check for OpenAI API key
+if not os.getenv("OPENAI_API_KEY"):
+    print("Error: OPENAI_API_KEY environment variable is not set.")
+    print("Please make sure you have a valid API key in your .env file.")
+    print("The variable should be named 'OPENAI_API_KEY' (not 'OPENAI_API_EKY' or similar).")
+    sys.exit(1)
 
 from pydantic_ai.mcp import MCPServerStdio
 from pydantic_ai import Agent
 
-load_dotenv()
-
 app = Flask(__name__)
 
-# Brave Search MCP server
-brave_server = MCPServerStdio(
-    'npx', ['-y', '@modelcontextprotocol/server-brave-search'],
-    env={"BRAVE_API_KEY": os.getenv("BRAVE_API_KEY")}
+# Desktop Commander MCP server for file/terminal operations
+desktop_commander = MCPServerStdio(
+    'npx', ['-y', '@wonderwhy-er/desktop-commander'],
+    env={}
 )
 
 agent = Agent(
     model="openai:gpt-4o-mini",
-    system_prompt="You are an assistant with the ability to search the web with Brave.",
-    mcp_servers=[brave_server]
+    system_prompt="""You are a task execution agent that can create, read, and modify files.
+    You have access to the Desktop Commander MCP which allows you to interact with the filesystem.
+    When you complete tasks, you should mark them as done in the tasks.md file by changing "[ ]" to "[x]".
+    Be thorough and detailed in your work. After completing each task, summarize what you've done.
+    """,
+    mcp_servers=[desktop_commander]
 )
 
 # Agent Card metadata
 AGENT_CARD = {
-    "name": "SearchAgent",
-    "description": "A simple agent that has an MCP server to search the web with Brave.",
+    "name": "TaskExecutionAgent",
+    "description": "An agent that can execute file-related tasks and mark them as completed.",
     "url": "http://localhost:5000",  # base URL where this agent is hosted
     "version": "1.0",
     "capabilities": {
@@ -52,6 +66,8 @@ async def handle_task():
     except Exception as e:
         return jsonify({"error": "Bad message format"}), 400
 
+    print(f"Received task: {user_text}")
+    
     async with agent.run_mcp_servers():
         result = await agent.run(user_text)
     response_text = result.data
@@ -71,4 +87,5 @@ async def handle_task():
     return jsonify(response_task)
 
 if __name__ == "__main__":
+    print("Starting Task Execution Agent server on http://localhost:5000")
     app.run(host="0.0.0.0", port=5000)

@@ -1,0 +1,10 @@
+{
+  "allowedDirectories": ["/home/adria/a2a-agent"],
+  "defaultShell": "/bin/bash",
+  "blockedCommands": [
+    "rm -rf",
+    "sudo",
+    "chmod",
+    "chown"
+  ]
+}
