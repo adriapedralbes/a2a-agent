@@ -110,43 +110,52 @@ case $choice in
     1)
         # Start all agents
         echo -e "${GREEN}Starting all agents...${NC}"
-        
+
         echo -e "${BLUE}Starting Planner Agent server...${NC}"
         python agents/planner/server.py &
         PLANNER_PID=$!
         sleep 2
-        
+
         echo -e "${BLUE}Starting Frontend Agent server...${NC}"
         python agents/frontend/server.py &
         FRONTEND_PID=$!
         sleep 2
-        
+
         echo -e "${BLUE}Starting Backend Agent server...${NC}"
         python agents/backend/server.py &
         BACKEND_PID=$!
         sleep 2
-        
+
         echo -e "${GREEN}All agent servers are running!${NC}"
         echo -e "${PURPLE}Now running Planner Agent client...${NC}"
         python agents/planner/client.py
-        
+
         echo -e "\n${YELLOW}Planner has created the project plan and tasks!${NC}"
         echo -e "${CYAN}Would you like to continue with development? (y/n)${NC}"
         read continue_dev
-        
+
         if [[ $continue_dev == "y" || $continue_dev == "Y" ]]; then
+            # Ask for project path
+            echo -e "${CYAN}Enter the path to your project (or leave empty to use the current directory):${NC}"
+            read project_path
+
+            # Use current directory if no path is provided
+            if [ -z "$project_path" ]; then
+                project_path=$(pwd)
+            fi
+
             # Start frontend and backend clients in separate terminals if possible
             if command -v gnome-terminal &> /dev/null; then
-                gnome-terminal -- bash -c "cd $(pwd) && source venv/bin/activate && python agents/frontend/client.py; exec bash"
-                gnome-terminal -- bash -c "cd $(pwd) && source venv/bin/activate && python agents/backend/client.py; exec bash"
+                gnome-terminal -- bash -c "cd $(pwd) && source venv/bin/activate && python agents/frontend/client.py \"$project_path\"; exec bash"
+                gnome-terminal -- bash -c "cd $(pwd) && source venv/bin/activate && python agents/backend/client.py \"$project_path\"; exec bash"
             elif command -v xterm &> /dev/null; then
-                xterm -e "cd $(pwd) && source venv/bin/activate && python agents/frontend/client.py" &
-                xterm -e "cd $(pwd) && source venv/bin/activate && python agents/backend/client.py" &
+                xterm -e "cd $(pwd) && source venv/bin/activate && python agents/frontend/client.py \"$project_path\"" &
+                xterm -e "cd $(pwd) && source venv/bin/activate && python agents/backend/client.py \"$project_path\"" &
             else
                 echo -e "${YELLOW}Cannot open new terminals automatically.${NC}"
                 echo -e "${YELLOW}Please run these commands in separate terminals:${NC}"
-                echo -e "${CYAN}python agents/frontend/client.py${NC}"
-                echo -e "${CYAN}python agents/backend/client.py${NC}"
+                echo -e "${CYAN}python agents/frontend/client.py \"$project_path\"${NC}"
+                echo -e "${CYAN}python agents/backend/client.py \"$project_path\"${NC}"
             fi
         fi
         ;;
@@ -156,7 +165,7 @@ case $choice in
         python agents/planner/server.py &
         PLANNER_PID=$!
         sleep 2
-        
+
         echo -e "${PURPLE}Now running Planner Agent client...${NC}"
         python agents/planner/client.py
         ;;
@@ -166,9 +175,17 @@ case $choice in
         python agents/frontend/server.py &
         FRONTEND_PID=$!
         sleep 2
-        
+
+        echo -e "${CYAN}Enter the path to your project (or leave empty to use the current directory):${NC}"
+        read project_path
+
+        # Use current directory if no path is provided
+        if [ -z "$project_path" ]; then
+            project_path=$(pwd)
+        fi
+
         echo -e "${PURPLE}Now running Frontend Agent client...${NC}"
-        python agents/frontend/client.py
+        python agents/frontend/client.py "$project_path"
         ;;
     4)
         # Start Backend agent only
@@ -176,9 +193,17 @@ case $choice in
         python agents/backend/server.py &
         BACKEND_PID=$!
         sleep 2
-        
+
+        echo -e "${CYAN}Enter the path to your project (or leave empty to use the current directory):${NC}"
+        read project_path
+
+        # Use current directory if no path is provided
+        if [ -z "$project_path" ]; then
+            project_path=$(pwd)
+        fi
+
         echo -e "${PURPLE}Now running Backend Agent client...${NC}"
-        python agents/backend/client.py
+        python agents/backend/client.py "$project_path"
         ;;
     5)
         # Start Frontend and Backend agents
@@ -186,24 +211,33 @@ case $choice in
         python agents/frontend/server.py &
         FRONTEND_PID=$!
         sleep 2
-        
+
         echo -e "${BLUE}Starting Backend Agent server...${NC}"
         python agents/backend/server.py &
         BACKEND_PID=$!
         sleep 2
-        
+
+        # Ask for project path
+        echo -e "${CYAN}Enter the path to your project (or leave empty to use the current directory):${NC}"
+        read project_path
+
+        # Use current directory if no path is provided
+        if [ -z "$project_path" ]; then
+            project_path=$(pwd)
+        fi
+
         # Start frontend and backend clients in separate terminals if possible
         if command -v gnome-terminal &> /dev/null; then
-            gnome-terminal -- bash -c "cd $(pwd) && source venv/bin/activate && python agents/frontend/client.py; exec bash"
-            gnome-terminal -- bash -c "cd $(pwd) && source venv/bin/activate && python agents/backend/client.py; exec bash"
+            gnome-terminal -- bash -c "cd $(pwd) && source venv/bin/activate && python agents/frontend/client.py \"$project_path\"; exec bash"
+            gnome-terminal -- bash -c "cd $(pwd) && source venv/bin/activate && python agents/backend/client.py \"$project_path\"; exec bash"
         elif command -v xterm &> /dev/null; then
-            xterm -e "cd $(pwd) && source venv/bin/activate && python agents/frontend/client.py" &
-            xterm -e "cd $(pwd) && source venv/bin/activate && python agents/backend/client.py" &
+            xterm -e "cd $(pwd) && source venv/bin/activate && python agents/frontend/client.py \"$project_path\"" &
+            xterm -e "cd $(pwd) && source venv/bin/activate && python agents/backend/client.py \"$project_path\"" &
         else
             echo -e "${YELLOW}Cannot open new terminals automatically.${NC}"
             echo -e "${YELLOW}Please run these commands in separate terminals:${NC}"
-            echo -e "${CYAN}python agents/frontend/client.py${NC}"
-            echo -e "${CYAN}python agents/backend/client.py${NC}"
+            echo -e "${CYAN}python agents/frontend/client.py \"$project_path\"${NC}"
+            echo -e "${CYAN}python agents/backend/client.py \"$project_path\"${NC}"
         fi
         ;;
     *)

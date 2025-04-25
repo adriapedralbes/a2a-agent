@@ -31,22 +31,22 @@ desktop_commander = MCPServerStdio(
 agent = Agent(
     model="openai:gpt-4o-mini",
     system_prompt="""You are a specialized frontend development agent with expertise in:
-    
+
     - HTML, CSS, and JavaScript
     - Modern frontend frameworks (React, Vue, Angular)
     - Responsive design
     - UI/UX implementation
     - Frontend testing and optimization
-    
+
     Your responsibilities:
     1. Implement frontend tasks from the tasks.md file
     2. Create and modify frontend code files
     3. Mark completed tasks in tasks.md by changing "[ ]" to "[x]"
     4. Provide detailed explanations of your implementation decisions
-    
+
     You should focus ONLY on frontend-related tasks. You have access to the filesystem
     through Desktop Commander MCP to create directories, files, and modify code.
-    
+
     When implementing tasks:
     - Follow best practices for modern frontend development
     - Create clean, maintainable, and well-documented code
@@ -88,20 +88,38 @@ async def handle_task():
     except Exception as e:
         return jsonify({"error": "Bad message format"}), 400
 
-    log_message(f"Received frontend task: {user_text}", "FrontendAgent")
-    
+    log_message(f"Received frontend task", "FrontendAgent")
+
+    # Extract project path from the message if available
+    project_path = "/home/adria/a2a-agent"  # Default path
+
+    if "PROJECT_PATH:" in user_text:
+        try:
+            path_line = [line for line in user_text.split('\n') if "PROJECT_PATH:" in line][0]
+            project_path = path_line.split("PROJECT_PATH:", 1)[1].strip()
+            log_message(f"Using project path: {project_path}", "FrontendAgent")
+        except Exception as e:
+            log_message(f"Error parsing project path: {str(e)}. Using default path.", "FrontendAgent")
+
     async with agent.run_mcp_servers():
         result = await agent.run(f"""
 I'll help you with the frontend development tasks as specified. First, I'll analyze the project:
 
-1. Read the plan.md file to understand the project architecture and technology choices
-2. Read the tasks.md file to identify the frontend tasks that need to be implemented
+1. Read the plan.md file in {project_path} to understand the project architecture and technology choices
+2. Read the tasks.md file in {project_path} to identify the frontend tasks that need to be implemented
 3. {user_text}
 
+IMPORTANT: For any npm or Node.js related commands (npm init, npm install, etc.), make sure to:
+- ALWAYS change to the project directory first: cd {project_path}
+- Run all npm commands within the project directory
+- Initialize any new Node.js projects with: cd {project_path} && npm init
+- Install dependencies with: cd {project_path} && npm install [package]
+- NEVER run npm commands in the current directory without changing to {project_path} first
+
 For each task I complete, I'll:
-- Create the necessary files and directories
+- Create the necessary files and directories in {project_path}
 - Implement the code following best practices
-- Mark the task as completed in tasks.md by replacing "[ ]" with "[x]"
+- Mark the task as completed in the tasks.md file by replacing "[ ]" with "[x]"
 - Provide a summary of what I've done
 
 Let me get started right away.

@@ -38,29 +38,30 @@ client_agent = Agent(
     mcp_servers=[desktop_commander]
 )
 
-def get_backend_tasks():
+def get_backend_tasks(project_path):
     """Read tasks.md and identify uncompleted backend tasks."""
     try:
-        with open('/home/adria/a2a-agent/tasks.md', 'r') as f:
+        tasks_file = os.path.join(project_path, 'tasks.md')
+        with open(tasks_file, 'r') as f:
             content = f.read()
-        
+
         # Look for sections that might contain backend tasks
         backend_section_pattern = r'#{1,3}\s+(?:Backend|Back[- ]?end|Server|API).*?\n(.*?)(?=#{1,3}|\Z)'
         backend_sections = re.findall(backend_section_pattern, content, re.DOTALL | re.IGNORECASE)
-        
+
         if not backend_sections:
             return "No backend section found in tasks.md"
-        
+
         # Find incomplete tasks in those sections
         incomplete_tasks = []
         for section in backend_sections:
             task_pattern = r'- \[ \](.*?)(?=\n- |\n\n|\Z)'
             tasks = re.findall(task_pattern, section, re.DOTALL)
             incomplete_tasks.extend(tasks)
-        
+
         if not incomplete_tasks:
             return "All backend tasks are completed!"
-        
+
         # Format the tasks
         task_list = "\n".join(f"- {task.strip()}" for task in incomplete_tasks)
         return f"Uncompleted backend tasks:\n\n{task_list}"
@@ -68,58 +69,80 @@ def get_backend_tasks():
         return f"Error reading tasks.md: {e}"
 
 async def main():
+    # Get project path from command line arguments or use current directory
+    project_path = os.getcwd()
+    if len(sys.argv) > 1:
+        project_path = sys.argv[1]
+        if not os.path.exists(project_path):
+            log_message(f"Error: Project path {project_path} does not exist.", "Backend Client")
+            return
+
+    log_message(f"Using project path: {project_path}", "Backend Client")
+
     # 1. Discover the backend agent
     log_message("Connecting to Backend Agent...", "Backend Client")
     backend_card = get_agent_card(BACKEND_URL)
     if not backend_card:
         log_message("Failed to connect to Backend Agent. Make sure it's running.", "Backend Client")
         return
-    
+
     log_message(f"Connected to {backend_card['name']} - {backend_card.get('description', '')}", "Backend Client")
-    
+
     # Check if plan.md and tasks.md exist
-    if not os.path.exists('/home/adria/a2a-agent/plan.md') or not os.path.exists('/home/adria/a2a-agent/tasks.md'):
-        log_message("Error: plan.md or tasks.md not found. Run the Planner Agent first.", "Backend Client")
+    plan_file = os.path.join(project_path, 'plan.md')
+    tasks_file = os.path.join(project_path, 'tasks.md')
+
+    if not os.path.exists(plan_file) or not os.path.exists(tasks_file):
+        log_message(f"Error: plan.md or tasks.md not found in {project_path}. Run the Planner Agent first.", "Backend Client")
         return
-    
+
     # Continuous loop to process backend tasks
     while True:
         # Use the client agent to analyze the tasks file
         async with client_agent.run_mcp_servers():
-            result = await client_agent.run("Read the tasks.md file and identify uncompleted backend tasks.")
+            result = await client_agent.run(f"Read the {tasks_file} file and identify uncompleted backend tasks.")
             next_task_analysis = result.data
-        
+
         # Check if there are any backend tasks to complete
-        backend_tasks = get_backend_tasks()
+        backend_tasks = get_backend_tasks(project_path)
         if "All backend tasks are completed" in backend_tasks:
             log_message("All backend tasks are completed! 🎉", "Backend Client")
             break
-        
+
         # Generate instructions for backend agent
-        task_prompt = f"""Please implement the next set of backend tasks from tasks.md.
+        task_prompt = f"""Please implement the next set of backend tasks from {tasks_file}.
+
+PROJECT_PATH: {project_path}
 
 Here are the pending backend tasks:
 {backend_tasks}
 
+IMPORTANT: For any npm or Node.js related commands (npm init, npm install, etc.), make sure to:
+- ALWAYS change to the project directory first: cd {project_path}
+- Run all npm commands within the project directory
+- Initialize any new Node.js projects with: cd {project_path} && npm init
+- Install dependencies with: cd {project_path} && npm install [package]
+- NEVER run npm commands in the current directory without changing to {project_path} first
+
 Please work on these tasks one by one. For each task:
-1. Create or modify the necessary files
+1. Create or modify the necessary files in the project path: {project_path}
 2. Implement the functionality described
-3. Mark the task as completed in tasks.md (change "[ ]" to "[x]")
+3. Mark the task as completed in {tasks_file} (change "[ ]" to "[x]")
 
 After completing each task, provide a summary of what you've done.
 """
-        
+
         log_message("Sending backend tasks to agent...", "Backend Client")
         backend_response = send_task_to_agent(BACKEND_URL, task_prompt)
         backend_reply = extract_agent_reply(backend_response)
-        
+
         if not backend_reply:
             log_message("Failed to get response from Backend Agent.", "Backend Client")
             break
-        
+
         log_message("Backend Agent has completed some tasks!", "Backend Client")
         print("\n" + backend_reply + "\n")
-        
+
         log_message("Waiting before checking for more tasks...", "Backend Client")
         time.sleep(3)  # Short pause before next iteration
 

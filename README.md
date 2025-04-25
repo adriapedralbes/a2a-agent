@@ -7,12 +7,14 @@ Este proyecto implementa un sistema de desarrollo colaborativo utilizando el pro
 El sistema consta de tres agentes principales que se comunican entre sí a través del protocolo A2A:
 
 1. **Agente Planificador**:
+
    - Recibe instrucciones del usuario
    - Crea un plan detallado (plan.md) para el proyecto
    - Genera una lista de tareas organizada (tasks.md) dividida en secciones frontend y backend
    - Coordina el trabajo entre los agentes especialistas
 
 2. **Agente Frontend**:
+
    - Especialista en desarrollo frontend
    - Implementa las tareas de frontend definidas en tasks.md
    - Marca las tareas completadas con una X
@@ -95,18 +97,47 @@ Este script proporciona un menú para seleccionar qué agentes ejecutar:
 ### Flujo de trabajo típico:
 
 1. **Planificación del proyecto**:
+
    - Ejecuta el Agente Planificador
    - Proporciona una descripción del proyecto web que deseas crear
-   - El agente generará archivos plan.md y tasks.md
+   - Especifica la ruta donde quieres crear el proyecto (o deja en blanco para usar el directorio actual)
+   - El agente generará archivos plan.md y tasks.md en la ruta especificada
 
 2. **Desarrollo**:
-   - Ejecuta los Agentes Frontend y Backend
+
+   - Ejecuta los Agentes Frontend y Backend, pasando la ruta del proyecto como parámetro
    - Estos agentes analizarán tasks.md y comenzarán a implementar sus tareas respectivas
    - Los agentes marcarán las tareas como completadas en tasks.md
 
 3. **Iteración**:
    - Los agentes continuarán trabajando hasta que todas las tareas estén completadas
    - Puedes hacer ajustes al plan.md o tasks.md manualmente si es necesario
+
+### Especificar la ruta del proyecto
+
+Puedes crear el proyecto en cualquier ruta que especifiques:
+
+1. **Con el Agente Planificador**:
+
+   ```bash
+   python agents/planner/client.py
+   ```
+
+   Cuando se te solicite, ingresa la ruta donde deseas crear el proyecto.
+
+2. **Con los Agentes Frontend y Backend**:
+   ```bash
+   python agents/frontend/client.py /ruta/a/tu/proyecto
+   python agents/backend/client.py /ruta/a/tu/proyecto
+   ```
+
+Si no especificas una ruta, se utilizará el directorio actual como ubicación del proyecto.
+
+### Nota sobre comandos npm
+
+Los agentes están configurados para ejecutar comandos npm (como npm init, npm install, etc.) dentro del directorio del proyecto especificado. Esto asegura que los archivos de Node.js (como node_modules, package.json, etc.) se creen en el directorio del proyecto y no en el directorio del agente.
+
+Si observas que se están creando archivos de Node.js en el directorio del agente, es posible que el agente no esté siguiendo las instrucciones correctamente. En ese caso, puedes eliminar esos archivos y reiniciar el proceso, asegurándote de que el agente reciba las instrucciones adecuadas.
 
 ## Cómo funciona el protocolo A2A
 
@@ -124,11 +155,13 @@ Ejemplo de interacción con el sistema:
 
 1. **Usuario**: "Necesito una aplicación web para gestionar un inventario de productos, con formularios para añadir/editar productos y una página para ver todos los productos."
 
-2. **Agente Planificador**: 
+2. **Agente Planificador**:
+
    - Crea plan.md con la arquitectura (React frontend, Node.js backend, MongoDB)
    - Genera tasks.md con tareas específicas para frontend y backend
 
 3. **Agente Frontend**:
+
    - Implementa componentes React, formularios, páginas, etc.
    - Marca tareas como completadas
 
